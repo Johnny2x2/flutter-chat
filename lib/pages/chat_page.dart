@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:my_chat_app/models/message.dart';
 import 'package:my_chat_app/models/profile.dart';
-import 'package:my_chat_app/pages/friends_list_page.dart';
+import 'package:my_chat_app/pages/invite_to_room_page.dart';
 import 'package:my_chat_app/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart';
@@ -13,11 +13,24 @@ import 'package:timeago/timeago.dart';
 ///
 /// Displays chat bubbles as a ListView and TextField to enter new chat.
 class ChatPage extends StatefulWidget {
-  const ChatPage({Key? key}) : super(key: key);
+  const ChatPage({
+    Key? key,
+    required this.conversationId,
+    required this.title,
+  }) : super(key: key);
 
-  static Route<void> route() {
+  final String conversationId;
+  final String title;
+
+  static Route<void> route({
+    required String conversationId,
+    required String title,
+  }) {
     return MaterialPageRoute(
-      builder: (context) => const ChatPage(),
+      builder: (context) => ChatPage(
+        conversationId: conversationId,
+        title: title,
+      ),
     );
   }
 
@@ -35,6 +48,7 @@ class _ChatPageState extends State<ChatPage> {
     _messagesStream = supabase
         .from('messages')
         .stream(primaryKey: ['id'])
+        .eq('conversation_id', widget.conversationId)
         .order('created_at')
         .map((maps) => maps
             .map((map) => Message.fromMap(map: map, myUserId: myUserId))
@@ -58,13 +72,18 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat'),
+        title: Text(widget.title),
         actions: [
           IconButton(
-            icon: const Icon(Icons.people),
-            tooltip: 'Friends',
+            icon: const Icon(Icons.person_add),
+            tooltip: 'Invite Friends',
             onPressed: () {
-              Navigator.of(context).push(FriendsListPage.route());
+              Navigator.of(context).push(
+                InviteToRoomPage.route(
+                  conversationId: widget.conversationId,
+                  roomTitle: widget.title,
+                ),
+              );
             },
           ),
         ],
@@ -99,7 +118,7 @@ class _ChatPageState extends State<ChatPage> {
                           },
                         ),
                 ),
-                const _MessageBar(),
+                _MessageBar(conversationId: widget.conversationId),
               ],
             );
           } else {
@@ -115,7 +134,10 @@ class _ChatPageState extends State<ChatPage> {
 class _MessageBar extends StatefulWidget {
   const _MessageBar({
     Key? key,
+    required this.conversationId,
   }) : super(key: key);
+
+  final String conversationId;
 
   @override
   State<_MessageBar> createState() => _MessageBarState();
@@ -180,6 +202,7 @@ class _MessageBarState extends State<_MessageBar> {
     try {
       await supabase.from('messages').insert({
         'profile_id': myUserId,
+        'conversation_id': widget.conversationId,
         'content': text,
       });
     } on PostgrestException catch (error) {
