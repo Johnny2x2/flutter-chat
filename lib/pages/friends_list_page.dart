@@ -148,30 +148,35 @@ class _FriendsListPageState extends State<FriendsListPage>
 
   Future<void> _startConversation(String friendId, String friendUsername) async {
     try {
-      // Check if a conversation already exists between us
-      final myParticipations = await supabase
+      // Find existing 1-on-1 conversation between us using a more efficient query
+      // Get all my conversation IDs
+      final myConversations = await supabase
           .from('conversation_participants')
           .select('conversation_id')
           .eq('profile_id', _myUserId);
 
-      for (final participation in myParticipations) {
-        final conversationId = participation['conversation_id'];
-        // Check if friend is also in this conversation
-        final friendParticipation = await supabase
-            .from('conversation_participants')
-            .select()
-            .eq('conversation_id', conversationId)
-            .eq('profile_id', friendId);
+      if (myConversations.isNotEmpty) {
+        final myConversationIds = (myConversations as List)
+            .map((c) => c['conversation_id'] as String)
+            .toList();
 
-        if (friendParticipation.isNotEmpty) {
-          // Check if it's a 1-on-1 conversation (only 2 participants)
-          final allParticipants = await supabase
+        // Find conversations where the friend is also a participant
+        final sharedConversations = await supabase
+            .from('conversation_participants')
+            .select('conversation_id')
+            .eq('profile_id', friendId)
+            .inFilter('conversation_id', myConversationIds);
+
+        // Check each shared conversation to find a 1-on-1 (exactly 2 participants)
+        for (final conv in sharedConversations) {
+          final conversationId = conv['conversation_id'] as String;
+          final participantCount = await supabase
               .from('conversation_participants')
-              .select()
+              .select('id')
               .eq('conversation_id', conversationId);
 
-          if (allParticipants.length == 2) {
-            // Existing conversation found, navigate to it
+          if (participantCount.length == 2) {
+            // Found existing 1-on-1 conversation
             if (mounted) {
               Navigator.of(context).push(
                 ChatPage.route(

@@ -54,10 +54,10 @@ class _ConversationsPageState extends State<ConversationsPage> {
 
   Future<void> _loadConversations() async {
     try {
-      // Get all conversations where I am a participant
+      // Get all conversations where I am a participant with joined data
       final participations = await supabase
           .from('conversation_participants')
-          .select('conversation_id')
+          .select('conversation_id, conversations(*)')
           .eq('profile_id', _myUserId);
 
       if (participations.isEmpty) {
@@ -72,38 +72,49 @@ class _ConversationsPageState extends State<ConversationsPage> {
           .map((p) => p['conversation_id'] as String)
           .toList();
 
-      // Get conversation details with other participants
+      // Get all participants for these conversations (excluding myself)
+      final allParticipants = await supabase
+          .from('conversation_participants')
+          .select('conversation_id, profile_id, profiles(*)')
+          .inFilter('conversation_id', conversationIds)
+          .neq('profile_id', _myUserId);
+
+      // Get last messages for all conversations
+      final allMessages = await supabase
+          .from('messages')
+          .select()
+          .inFilter('conversation_id', conversationIds)
+          .order('created_at', ascending: false);
+
+      // Group participants by conversation
+      final participantsByConversation = <String, List<Map<String, dynamic>>>{};
+      for (final p in allParticipants) {
+        final convId = p['conversation_id'] as String;
+        participantsByConversation.putIfAbsent(convId, () => []);
+        participantsByConversation[convId]!.add(p);
+      }
+
+      // Get latest message per conversation
+      final lastMessageByConversation = <String, Map<String, dynamic>>{};
+      for (final msg in allMessages) {
+        final convId = msg['conversation_id'] as String;
+        if (!lastMessageByConversation.containsKey(convId)) {
+          lastMessageByConversation[convId] = msg;
+        }
+      }
+
+      // Build conversation list
       final conversations = <Map<String, dynamic>>[];
-
-      for (final conversationId in conversationIds) {
-        // Get the conversation
-        final conversationData = await supabase
-            .from('conversations')
-            .select()
-            .eq('id', conversationId)
-            .single();
-
-        // Get other participants
-        final participants = await supabase
-            .from('conversation_participants')
-            .select('profile_id, profiles(*)')
-            .eq('conversation_id', conversationId)
-            .neq('profile_id', _myUserId);
-
-        // Get last message
-        final lastMessages = await supabase
-            .from('messages')
-            .select()
-            .eq('conversation_id', conversationId)
-            .order('created_at', ascending: false)
-            .limit(1);
+      for (final participation in participations) {
+        final conversationId = participation['conversation_id'] as String;
+        final conversationData = participation['conversations'];
 
         conversations.add({
           'id': conversationId,
           'name': conversationData['name'],
           'created_at': conversationData['created_at'],
-          'participants': participants,
-          'last_message': lastMessages.isNotEmpty ? lastMessages[0] : null,
+          'participants': participantsByConversation[conversationId] ?? [],
+          'last_message': lastMessageByConversation[conversationId],
         });
       }
 
