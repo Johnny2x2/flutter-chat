@@ -1,6 +1,7 @@
 class Message {
   Message({
     required this.id,
+    required this.conversationId,
     required this.profileId,
     required this.content,
     required this.createdAt,
@@ -9,6 +10,9 @@ class Message {
 
   /// ID of the message
   final String id;
+
+  /// ID of the conversation this message belongs to
+  final String conversationId;
 
   /// ID of the user who posted the message
   final String profileId;
@@ -26,6 +30,7 @@ class Message {
     required Map<String, dynamic> map,
     required String myUserId,
   })  : id = map['id'],
+        conversationId = map['conversation_id'],
         profileId = map['profile_id'],
         content = map['content'],
         createdAt = DateTime.parse(map['created_at']),

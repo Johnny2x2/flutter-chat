@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:my_chat_app/pages/add_friend_page.dart';
+import 'package:my_chat_app/pages/chat_page.dart';
 import 'package:my_chat_app/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -145,6 +146,79 @@ class _FriendsListPageState extends State<FriendsListPage>
     await _deleteFriendship(friendshipId, 'Friend request cancelled');
   }
 
+  Future<void> _startConversation(String friendId, String friendUsername) async {
+    try {
+      // Check if a conversation already exists between us
+      final myParticipations = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('profile_id', _myUserId);
+
+      for (final participation in myParticipations) {
+        final conversationId = participation['conversation_id'];
+        // Check if friend is also in this conversation
+        final friendParticipation = await supabase
+            .from('conversation_participants')
+            .select()
+            .eq('conversation_id', conversationId)
+            .eq('profile_id', friendId);
+
+        if (friendParticipation.isNotEmpty) {
+          // Check if it's a 1-on-1 conversation (only 2 participants)
+          final allParticipants = await supabase
+              .from('conversation_participants')
+              .select()
+              .eq('conversation_id', conversationId);
+
+          if (allParticipants.length == 2) {
+            // Existing conversation found, navigate to it
+            if (mounted) {
+              Navigator.of(context).push(
+                ChatPage.route(
+                  conversationId: conversationId,
+                  title: friendUsername,
+                ),
+              );
+            }
+            return;
+          }
+        }
+      }
+
+      // No existing conversation, create a new one
+      final conversationResult = await supabase
+          .from('conversations')
+          .insert({})
+          .select()
+          .single();
+
+      final conversationId = conversationResult['id'];
+
+      // Add both participants
+      await supabase.from('conversation_participants').insert([
+        {'conversation_id': conversationId, 'profile_id': _myUserId},
+        {'conversation_id': conversationId, 'profile_id': friendId},
+      ]);
+
+      if (mounted) {
+        Navigator.of(context).push(
+          ChatPage.route(
+            conversationId: conversationId,
+            title: friendUsername,
+          ),
+        );
+      }
+    } on PostgrestException catch (error) {
+      if (mounted) {
+        context.showErrorSnackBar(message: error.message);
+      }
+    } catch (_) {
+      if (mounted) {
+        context.showErrorSnackBar(message: unexpectedErrorMessage);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -204,6 +278,7 @@ class _FriendsListPageState extends State<FriendsListPage>
           // Determine if friend data comes from 'friend' or 'user' key
           final friendProfile =
               friendship['friend'] ?? friendship['user'];
+          final friendId = friendProfile['id'];
           final username = friendProfile['username'] ?? 'Unknown';
 
           return ListTile(
@@ -211,13 +286,25 @@ class _FriendsListPageState extends State<FriendsListPage>
               child: Text(_getSafeInitials(username)),
             ),
             title: Text(username),
-            trailing: IconButton(
-              icon: const Icon(Icons.person_remove, color: Colors.red),
-              onPressed: () => _showRemoveFriendDialog(
-                friendship['id'],
-                username,
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chat, color: Colors.orange),
+                  tooltip: 'Start conversation',
+                  onPressed: () => _startConversation(friendId, username),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.person_remove, color: Colors.red),
+                  tooltip: 'Remove friend',
+                  onPressed: () => _showRemoveFriendDialog(
+                    friendship['id'],
+                    username,
+                  ),
+                ),
+              ],
             ),
+            onTap: () => _startConversation(friendId, username),
           );
         },
       ),

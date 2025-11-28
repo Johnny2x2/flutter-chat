@@ -7,7 +7,10 @@ You can also find an example using [row level security](https://supabase.com/doc
 ## Features
 
 - User authentication (register/login)
-- Real-time chat messaging
+- Private real-time chat conversations
+  - Start 1-on-1 conversations with friends
+  - Persistent chat rooms you can come back to
+  - Real-time message updates
 - Friends list management
   - Search and add friends by username
   - Accept or reject friend requests
@@ -29,13 +32,32 @@ create table if not exists public.profiles (
 );
 comment on table public.profiles is 'Holds all of users profile information';
 
+create table if not exists public.conversations (
+    id uuid not null primary key default uuid_generate_v4(),
+    name varchar(100),
+    created_at timestamp with time zone default timezone('utc' :: text, now()) not null
+);
+comment on table public.conversations is 'Holds conversation/chat room information.';
+
+create table if not exists public.conversation_participants (
+    id uuid not null primary key default uuid_generate_v4(),
+    conversation_id uuid references public.conversations(id) on delete cascade not null,
+    profile_id uuid references public.profiles(id) on delete cascade not null,
+    created_at timestamp with time zone default timezone('utc' :: text, now()) not null,
+
+    -- Ensure unique participant per conversation
+    constraint unique_participant unique (conversation_id, profile_id)
+);
+comment on table public.conversation_participants is 'Holds participants of each conversation.';
+
 create table if not exists public.messages (
     id uuid not null primary key default uuid_generate_v4(),
+    conversation_id uuid references public.conversations(id) on delete cascade not null,
     profile_id uuid default auth.uid() references public.profiles(id) on delete cascade not null,
     content varchar(500) not null,
     created_at timestamp with time zone default timezone('utc' :: text, now()) not null
 );
-comment on table public.messages is 'Holds individual messages within a chat room.';
+comment on table public.messages is 'Holds individual messages within a conversation.';
 
 create table if not exists public.friendships (
     id uuid not null primary key default uuid_generate_v4(),
@@ -56,6 +78,8 @@ comment on table public.friendships is 'Holds friendship relationships between u
 -- *** Add tables to the publication to enable realtime ***
 alter publication supabase_realtime add table public.messages;
 alter publication supabase_realtime add table public.friendships;
+alter publication supabase_realtime add table public.conversations;
+alter publication supabase_realtime add table public.conversation_participants;
 
 
 -- Function to create a new row in profiles table upon signup
