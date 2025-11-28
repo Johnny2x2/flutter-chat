@@ -29,10 +29,10 @@ class Message {
   Message.fromMap({
     required Map<String, dynamic> map,
     required String myUserId,
-  })  : id = map['id'],
-        conversationId = map['conversation_id'],
-        profileId = map['profile_id'],
-        content = map['content'],
-        createdAt = DateTime.parse(map['created_at']),
+  })  : id = map['id'] as String? ?? '',
+        conversationId = map['conversation_id'] as String? ?? '',
+        profileId = map['profile_id'] as String? ?? '',
+        content = map['content'] as String? ?? '',
+        createdAt = DateTime.tryParse(map['created_at'] as String? ?? '') ?? DateTime.now(),
         isMine = myUserId == map['profile_id'];
 }

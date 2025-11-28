@@ -20,8 +20,8 @@ class ConversationParticipant {
   final DateTime createdAt;
 
   ConversationParticipant.fromMap(Map<String, dynamic> map)
-      : id = map['id'],
-        conversationId = map['conversation_id'],
-        profileId = map['profile_id'],
-        createdAt = DateTime.parse(map['created_at']);
+      : id = map['id'] as String? ?? '',
+        conversationId = map['conversation_id'] as String? ?? '',
+        profileId = map['profile_id'] as String? ?? '',
+        createdAt = DateTime.tryParse(map['created_at'] as String? ?? '') ?? DateTime.now();
 }

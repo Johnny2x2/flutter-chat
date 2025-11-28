@@ -156,7 +156,7 @@ class _FriendsListPageState extends State<FriendsListPage>
           .eq('profile_id', _myUserId);
 
       if (myConversations.isNotEmpty) {
-        final myConversationIds = (myConversations as List)
+        final myConversationIds = myConversations
             .map((c) => c['conversation_id'] as String)
             .toList();
 
@@ -167,25 +167,38 @@ class _FriendsListPageState extends State<FriendsListPage>
             .eq('profile_id', friendId)
             .inFilter('conversation_id', myConversationIds);
 
-        // Check each shared conversation to find a 1-on-1 (exactly 2 participants)
-        for (final conv in sharedConversations) {
-          final conversationId = conv['conversation_id'] as String;
-          final participantCount = await supabase
-              .from('conversation_participants')
-              .select('id')
-              .eq('conversation_id', conversationId);
+        if (sharedConversations.isNotEmpty) {
+          final sharedConversationIds = sharedConversations
+              .map((c) => c['conversation_id'] as String)
+              .toList();
 
-          if (participantCount.length == 2) {
-            // Found existing 1-on-1 conversation
-            if (mounted) {
-              Navigator.of(context).push(
-                ChatPage.route(
-                  conversationId: conversationId,
-                  title: friendUsername,
-                ),
-              );
+          // Get participant counts for all shared conversations in one query
+          final allParticipants = await supabase
+              .from('conversation_participants')
+              .select('conversation_id')
+              .inFilter('conversation_id', sharedConversationIds);
+
+          // Count participants per conversation
+          final participantCounts = <String, int>{};
+          for (final p in allParticipants) {
+            final convId = p['conversation_id'] as String;
+            participantCounts[convId] = (participantCounts[convId] ?? 0) + 1;
+          }
+
+          // Find first conversation with exactly 2 participants (1-on-1)
+          for (final convId in sharedConversationIds) {
+            if (participantCounts[convId] == 2) {
+              // Found existing 1-on-1 conversation
+              if (mounted) {
+                Navigator.of(context).push(
+                  ChatPage.route(
+                    conversationId: convId,
+                    title: friendUsername,
+                  ),
+                );
+              }
+              return;
             }
-            return;
           }
         }
       }

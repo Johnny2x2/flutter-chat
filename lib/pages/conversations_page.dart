@@ -68,7 +68,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
         return;
       }
 
-      final conversationIds = (participations as List)
+      final conversationIds = participations
           .map((p) => p['conversation_id'] as String)
           .toList();
 
@@ -86,15 +86,17 @@ class _ConversationsPageState extends State<ConversationsPage> {
           .inFilter('conversation_id', conversationIds)
           .order('created_at', ascending: false);
 
-      // Group participants by conversation
-      final participantsByConversation = <String, List<Map<String, dynamic>>>{};
-      for (final p in allParticipants) {
-        final convId = p['conversation_id'] as String;
-        participantsByConversation.putIfAbsent(convId, () => []);
-        participantsByConversation[convId]!.add(p);
-      }
+      // Group participants by conversation using fold
+      final participantsByConversation = allParticipants.fold<Map<String, List<Map<String, dynamic>>>>(
+        {},
+        (map, p) {
+          final convId = p['conversation_id'] as String;
+          (map[convId] ??= []).add(p);
+          return map;
+        },
+      );
 
-      // Get latest message per conversation
+      // Get latest message per conversation (first occurrence is latest due to order)
       final lastMessageByConversation = <String, Map<String, dynamic>>{};
       for (final msg in allMessages) {
         final convId = msg['conversation_id'] as String;
