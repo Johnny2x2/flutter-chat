@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:my_chat_app/pages/chat_page.dart';
+import 'package:my_chat_app/pages/create_room_page.dart';
 import 'package:my_chat_app/pages/friends_list_page.dart';
 import 'package:my_chat_app/pages/register_page.dart';
 import 'package:my_chat_app/utils/constants.dart';
@@ -185,7 +186,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Conversations'),
+        title: const Text('Chat Rooms'),
         actions: [
           IconButton(
             icon: const Icon(Icons.people),
@@ -202,6 +203,15 @@ class _ConversationsPageState extends State<ConversationsPage> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          await Navigator.of(context).push(CreateRoomPage.route());
+          _loadConversations();
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('New Room'),
+        backgroundColor: Colors.orange,
+      ),
       body: _isLoading
           ? preloader
           : _conversations.isEmpty
@@ -216,21 +226,21 @@ class _ConversationsPageState extends State<ConversationsPage> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'No conversations yet',
+                        'No chat rooms yet',
                         style: TextStyle(fontSize: 18, color: Colors.grey),
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Start a conversation from your friends list',
+                        'Create a room and invite your friends!',
                         style: TextStyle(color: Colors.grey),
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton.icon(
-                        icon: const Icon(Icons.people),
-                        label: const Text('Go to Friends'),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Create Room'),
                         onPressed: () async {
                           await Navigator.of(context)
-                              .push(FriendsListPage.route());
+                              .push(CreateRoomPage.route());
                           _loadConversations();
                         },
                       ),

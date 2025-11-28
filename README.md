@@ -7,8 +7,10 @@ You can also find an example using [row level security](https://supabase.com/doc
 ## Features
 
 - User authentication (register/login)
-- Private real-time chat conversations
-  - Start 1-on-1 conversations with friends
+- Group chat rooms (Discord-style)
+  - Create chat rooms with custom names
+  - Invite multiple friends to a room
+  - Invite more friends from within a chat room
   - Persistent chat rooms you can come back to
   - Real-time message updates
 - Friends list management

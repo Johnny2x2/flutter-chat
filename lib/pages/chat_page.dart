@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:my_chat_app/models/message.dart';
 import 'package:my_chat_app/models/profile.dart';
+import 'package:my_chat_app/pages/invite_to_room_page.dart';
 import 'package:my_chat_app/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart';
@@ -72,6 +73,20 @@ class _ChatPageState extends State<ChatPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add),
+            tooltip: 'Invite Friends',
+            onPressed: () {
+              Navigator.of(context).push(
+                InviteToRoomPage.route(
+                  conversationId: widget.conversationId,
+                  roomTitle: widget.title,
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<List<Message>>(
         stream: _messagesStream,
