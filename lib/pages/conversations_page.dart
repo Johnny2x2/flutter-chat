@@ -29,6 +29,19 @@ class _ConversationsPageState extends State<ConversationsPage> {
   bool _isLoading = true;
   StreamSubscription? _conversationSubscription;
 
+  DateTime _parseTimestamp(dynamic value) {
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is String && value.isNotEmpty) {
+      final parsed = DateTime.tryParse(value);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    return DateTime.fromMillisecondsSinceEpoch(0);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -61,7 +74,10 @@ class _ConversationsPageState extends State<ConversationsPage> {
           .select('conversation_id, conversations(*)')
           .eq('profile_id', _myUserId);
 
-      if (participations.isEmpty) {
+      final participationList =
+          List<Map<String, dynamic>>.from(participations);
+
+      if (participationList.isEmpty) {
         setState(() {
           _conversations = [];
           _isLoading = false;
@@ -69,29 +85,39 @@ class _ConversationsPageState extends State<ConversationsPage> {
         return;
       }
 
-      final conversationIds = participations
-          .map((p) => p['conversation_id'] as String)
+      final conversationIds = participationList
+          .map((p) => p['conversation_id'])
+          .whereType<String>()
           .toList();
 
       // Get all participants for these conversations (excluding myself)
-      final allParticipants = await supabase
+        final allParticipants = await supabase
           .from('conversation_participants')
           .select('conversation_id, profile_id, profiles(*)')
-          .inFilter('conversation_id', conversationIds)
+          .in_('conversation_id', conversationIds)
           .neq('profile_id', _myUserId);
+
+      final participantList =
+          List<Map<String, dynamic>>.from(allParticipants);
 
       // Get last messages for all conversations
       final allMessages = await supabase
           .from('messages')
           .select()
-          .inFilter('conversation_id', conversationIds)
+          .in_('conversation_id', conversationIds)
           .order('created_at', ascending: false);
 
+      final messageList = List<Map<String, dynamic>>.from(allMessages);
+
       // Group participants by conversation using fold
-      final participantsByConversation = allParticipants.fold<Map<String, List<Map<String, dynamic>>>>(
+      final participantsByConversation = participantList
+          .fold<Map<String, List<Map<String, dynamic>>>>(
         {},
         (map, p) {
-          final convId = p['conversation_id'] as String;
+          final convId = p['conversation_id'] as String?;
+          if (convId == null) {
+            return map;
+          }
           (map[convId] ??= []).add(p);
           return map;
         },
@@ -99,23 +125,32 @@ class _ConversationsPageState extends State<ConversationsPage> {
 
       // Get latest message per conversation (first occurrence is latest due to order)
       final lastMessageByConversation = <String, Map<String, dynamic>>{};
-      for (final msg in allMessages) {
-        final convId = msg['conversation_id'] as String;
-        if (!lastMessageByConversation.containsKey(convId)) {
-          lastMessageByConversation[convId] = msg;
+      for (final msg in messageList) {
+        final convId = msg['conversation_id'] as String?;
+        if (convId == null || lastMessageByConversation.containsKey(convId)) {
+          continue;
         }
+        lastMessageByConversation[convId] = {
+          ...msg,
+          'created_at': _parseTimestamp(msg['created_at']),
+        };
       }
 
       // Build conversation list
       final conversations = <Map<String, dynamic>>[];
-      for (final participation in participations) {
-        final conversationId = participation['conversation_id'] as String;
-        final conversationData = participation['conversations'];
+      for (final participation in participationList) {
+        final conversationId = participation['conversation_id'] as String?;
+        if (conversationId == null) {
+          continue;
+        }
+        final conversationData =
+            participation['conversations'] as Map<String, dynamic>?;
+        final createdAt = _parseTimestamp(conversationData?['created_at']);
 
         conversations.add({
           'id': conversationId,
-          'name': conversationData['name'],
-          'created_at': conversationData['created_at'],
+          'name': conversationData?['name'],
+          'created_at': createdAt,
           'participants': participantsByConversation[conversationId] ?? [],
           'last_message': lastMessageByConversation[conversationId],
         });
@@ -124,11 +159,11 @@ class _ConversationsPageState extends State<ConversationsPage> {
       // Sort by last message time or created_at
       conversations.sort((a, b) {
         final aTime = a['last_message'] != null
-            ? DateTime.parse(a['last_message']['created_at'])
-            : DateTime.parse(a['created_at']);
+            ? a['last_message']['created_at'] as DateTime
+            : a['created_at'] as DateTime;
         final bTime = b['last_message'] != null
-            ? DateTime.parse(b['last_message']['created_at'])
-            : DateTime.parse(b['created_at']);
+            ? b['last_message']['created_at'] as DateTime
+            : b['created_at'] as DateTime;
         return bTime.compareTo(aTime);
       });
 
@@ -167,13 +202,24 @@ class _ConversationsPageState extends State<ConversationsPage> {
     if (conversation['name'] != null) {
       return conversation['name'];
     }
-    final participants = conversation['participants'] as List;
+    final participants = List<Map<String, dynamic>>.from(
+      (conversation['participants'] as List?) ?? const [],
+    );
     if (participants.isEmpty) {
       return 'Empty Conversation';
     }
-    return participants
-        .map((p) => (p['profiles'] as Map<String, dynamic>)['username'])
-        .join(', ');
+    final participantNames = participants
+        .map((p) => p['profiles'] as Map<String, dynamic>?)
+        .where((profile) => profile != null)
+        .map((profile) => profile!['username'])
+        .whereType<String>()
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toList();
+    if (participantNames.isEmpty) {
+      return 'Empty Conversation';
+    }
+    return participantNames.join(', ');
   }
 
   @override
@@ -265,7 +311,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
                         trailing: lastMessage != null
                             ? Text(
                                 format(
-                                  DateTime.parse(lastMessage['created_at']),
+                                  lastMessage['created_at'] as DateTime,
                                   locale: 'en_short',
                                 ),
                                 style: const TextStyle(
