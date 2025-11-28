@@ -17,6 +17,13 @@ const formPadding = EdgeInsets.symmetric(vertical: 20, horizontal: 16);
 /// Error message to display the user when unexpected error occurs.
 const unexpectedErrorMessage = 'Unexpected error occured.';
 
+/// Returns a safe substring for avatar display (up to 2 characters)
+String getSafeInitials(String text) {
+  if (text.isEmpty) return '?';
+  if (text.length == 1) return text.toUpperCase();
+  return text.substring(0, 2).toUpperCase();
+}
+
 /// Basic theme to change the look and feel of the app
 final appTheme = ThemeData.light().copyWith(
   primaryColorDark: Colors.orange,

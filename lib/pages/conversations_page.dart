@@ -176,12 +176,6 @@ class _ConversationsPageState extends State<ConversationsPage> {
         .join(', ');
   }
 
-  String _getSafeInitials(String text) {
-    if (text.isEmpty) return '?';
-    if (text.length == 1) return text.toUpperCase();
-    return text.substring(0, 2).toUpperCase();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -258,7 +252,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
 
                       return ListTile(
                         leading: CircleAvatar(
-                          child: Text(_getSafeInitials(title)),
+                          child: Text(getSafeInitials(title)),
                         ),
                         title: Text(title),
                         subtitle: lastMessage != null

@@ -144,12 +144,6 @@ class _InviteToRoomPageState extends State<InviteToRoomPage> {
     }
   }
 
-  String _getSafeInitials(String username) {
-    if (username.isEmpty) return '?';
-    if (username.length == 1) return username.toUpperCase();
-    return username.substring(0, 2).toUpperCase();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -202,7 +196,7 @@ class _InviteToRoomPageState extends State<InviteToRoomPage> {
 
                             return CheckboxListTile(
                               secondary: CircleAvatar(
-                                child: Text(_getSafeInitials(username)),
+                                child: Text(getSafeInitials(username)),
                               ),
                               title: Text(username),
                               value: isSelected,

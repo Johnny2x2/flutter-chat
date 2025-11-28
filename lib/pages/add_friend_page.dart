@@ -3,13 +3,6 @@ import 'package:my_chat_app/models/profile.dart';
 import 'package:my_chat_app/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// Returns a safe substring for avatar display (up to 2 characters)
-String _getSafeInitials(String username) {
-  if (username.isEmpty) return '?';
-  if (username.length == 1) return username.toUpperCase();
-  return username.substring(0, 2).toUpperCase();
-}
-
 /// Page to search for and add friends
 class AddFriendPage extends StatefulWidget {
   const AddFriendPage({Key? key}) : super(key: key);
@@ -194,7 +187,7 @@ class _AddFriendPageState extends State<AddFriendPage> {
                               return ListTile(
                                 leading: CircleAvatar(
                                   child: Text(
-                                    _getSafeInitials(profile.username),
+                                    getSafeInitials(profile.username),
                                   ),
                                 ),
                                 title: Text(profile.username),

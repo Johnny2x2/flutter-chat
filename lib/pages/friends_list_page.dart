@@ -17,13 +17,6 @@ class FriendsListPage extends StatefulWidget {
   State<FriendsListPage> createState() => _FriendsListPageState();
 }
 
-/// Returns a safe substring for avatar display (up to 2 characters)
-String _getSafeInitials(String username) {
-  if (username.isEmpty) return '?';
-  if (username.length == 1) return username.toUpperCase();
-  return username.substring(0, 2).toUpperCase();
-}
-
 class _FriendsListPageState extends State<FriendsListPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
@@ -208,7 +201,7 @@ class _FriendsListPageState extends State<FriendsListPage>
 
           return ListTile(
             leading: CircleAvatar(
-              child: Text(_getSafeInitials(username)),
+              child: Text(getSafeInitials(username)),
             ),
             title: Text(username),
             trailing: IconButton(
@@ -242,7 +235,7 @@ class _FriendsListPageState extends State<FriendsListPage>
 
           return ListTile(
             leading: CircleAvatar(
-              child: Text(_getSafeInitials(username)),
+              child: Text(getSafeInitials(username)),
             ),
             title: Text(username),
             subtitle: const Text('Wants to be your friend'),
@@ -282,7 +275,7 @@ class _FriendsListPageState extends State<FriendsListPage>
 
           return ListTile(
             leading: CircleAvatar(
-              child: Text(_getSafeInitials(username)),
+              child: Text(getSafeInitials(username)),
             ),
             title: Text(username),
             subtitle: const Text('Request pending'),
