@@ -1,8 +1,4 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:my_chat_app/models/friendship.dart';
-import 'package:my_chat_app/models/profile.dart';
 import 'package:my_chat_app/pages/add_friend_page.dart';
 import 'package:my_chat_app/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -19,6 +15,13 @@ class FriendsListPage extends StatefulWidget {
 
   @override
   State<FriendsListPage> createState() => _FriendsListPageState();
+}
+
+/// Returns a safe substring for avatar display (up to 2 characters)
+String _getSafeInitials(String username) {
+  if (username.isEmpty) return '?';
+  if (username.length == 1) return username.toUpperCase();
+  return username.substring(0, 2).toUpperCase();
 }
 
 class _FriendsListPageState extends State<FriendsListPage>
@@ -118,40 +121,28 @@ class _FriendsListPageState extends State<FriendsListPage>
     }
   }
 
-  Future<void> _rejectFriendRequest(String friendshipId) async {
+  Future<void> _deleteFriendship(String friendshipId, String successMessage) async {
     try {
       await supabase.from('friendships').delete().eq('id', friendshipId);
-      context.showSnackBar(message: 'Friend request rejected');
+      context.showSnackBar(message: successMessage);
       _loadFriends();
     } on PostgrestException catch (error) {
       context.showErrorSnackBar(message: error.message);
     } catch (_) {
       context.showErrorSnackBar(message: unexpectedErrorMessage);
     }
+  }
+
+  Future<void> _rejectFriendRequest(String friendshipId) async {
+    await _deleteFriendship(friendshipId, 'Friend request rejected');
   }
 
   Future<void> _removeFriend(String friendshipId) async {
-    try {
-      await supabase.from('friendships').delete().eq('id', friendshipId);
-      context.showSnackBar(message: 'Friend removed');
-      _loadFriends();
-    } on PostgrestException catch (error) {
-      context.showErrorSnackBar(message: error.message);
-    } catch (_) {
-      context.showErrorSnackBar(message: unexpectedErrorMessage);
-    }
+    await _deleteFriendship(friendshipId, 'Friend removed');
   }
 
   Future<void> _cancelRequest(String friendshipId) async {
-    try {
-      await supabase.from('friendships').delete().eq('id', friendshipId);
-      context.showSnackBar(message: 'Friend request cancelled');
-      _loadFriends();
-    } on PostgrestException catch (error) {
-      context.showErrorSnackBar(message: error.message);
-    } catch (_) {
-      context.showErrorSnackBar(message: unexpectedErrorMessage);
-    }
+    await _deleteFriendship(friendshipId, 'Friend request cancelled');
   }
 
   @override
@@ -217,7 +208,7 @@ class _FriendsListPageState extends State<FriendsListPage>
 
           return ListTile(
             leading: CircleAvatar(
-              child: Text(username.substring(0, 2).toUpperCase()),
+              child: Text(_getSafeInitials(username)),
             ),
             title: Text(username),
             trailing: IconButton(
@@ -250,7 +241,7 @@ class _FriendsListPageState extends State<FriendsListPage>
 
           return ListTile(
             leading: CircleAvatar(
-              child: Text(username.substring(0, 2).toUpperCase()),
+              child: Text(_getSafeInitials(username)),
             ),
             title: Text(username),
             subtitle: const Text('Wants to be your friend'),
@@ -290,7 +281,7 @@ class _FriendsListPageState extends State<FriendsListPage>
 
           return ListTile(
             leading: CircleAvatar(
-              child: Text(username.substring(0, 2).toUpperCase()),
+              child: Text(_getSafeInitials(username)),
             ),
             title: Text(username),
             subtitle: const Text('Request pending'),
