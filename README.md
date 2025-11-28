@@ -4,6 +4,16 @@ Simple chat app to demonstrate the realtime capability of Supabase with Flutter.
 
 You can also find an example using [row level security](https://supabase.com/docs/guides/auth/row-level-security) to provide chat rooms to enable 1 to 1 chats on the [`with-auth` branch](https://github.com/supabase-community/flutter-chat/tree/with_auth). 
 
+## Features
+
+- User authentication (register/login)
+- Real-time chat messaging
+- Friends list management
+  - Search and add friends by username
+  - Accept or reject friend requests
+  - View pending and sent friend requests
+  - Remove friends
+
 ## SQL
 
 ```sql
@@ -27,8 +37,25 @@ create table if not exists public.messages (
 );
 comment on table public.messages is 'Holds individual messages within a chat room.';
 
+create table if not exists public.friendships (
+    id uuid not null primary key default uuid_generate_v4(),
+    user_id uuid references public.profiles(id) on delete cascade not null,
+    friend_id uuid references public.profiles(id) on delete cascade not null,
+    status varchar(20) not null default 'pending',
+    created_at timestamp with time zone default timezone('utc' :: text, now()) not null,
+
+    -- Ensure user can't friend themselves
+    constraint no_self_friendship check (user_id != friend_id),
+    -- Ensure unique friendship pairs
+    constraint unique_friendship unique (user_id, friend_id),
+    -- Status must be one of: pending, accepted, rejected
+    constraint valid_status check (status in ('pending', 'accepted', 'rejected'))
+);
+comment on table public.friendships is 'Holds friendship relationships between users.';
+
 -- *** Add tables to the publication to enable realtime ***
 alter publication supabase_realtime add table public.messages;
+alter publication supabase_realtime add table public.friendships;
 
 
 -- Function to create a new row in profiles table upon signup

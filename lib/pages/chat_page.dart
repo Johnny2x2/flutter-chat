@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'package:my_chat_app/models/message.dart';
 import 'package:my_chat_app/models/profile.dart';
+import 'package:my_chat_app/pages/friends_list_page.dart';
 import 'package:my_chat_app/utils/constants.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:timeago/timeago.dart';
@@ -56,7 +57,18 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chat')),
+      appBar: AppBar(
+        title: const Text('Chat'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.people),
+            tooltip: 'Friends',
+            onPressed: () {
+              Navigator.of(context).push(FriendsListPage.route());
+            },
+          ),
+        ],
+      ),
       body: StreamBuilder<List<Message>>(
         stream: _messagesStream,
         builder: (context, snapshot) {
